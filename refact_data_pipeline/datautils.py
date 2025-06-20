@@ -57,8 +57,13 @@ def collate_fn(records: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def data_parallel_split_and_collate_fn(records: List[Dict[str, Any]], global_batch_size: int) -> Dict[str, Any]:
-    rank = dist.get_rank()
-    world_size = dist.get_world_size()
+    import torch.distributed as dist
+    if dist.is_available() and dist.is_initialized():
+        rank = dist.get_rank()
+        world_size = dist.get_world_size()
+    else:
+        rank = 0
+        world_size = 1
     effective_bs = global_batch_size // world_size
     assert effective_bs * world_size == len(records), "effective batch size %s" % len(records)
 

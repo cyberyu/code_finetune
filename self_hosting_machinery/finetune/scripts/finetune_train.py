@@ -377,16 +377,17 @@ def main(supported_models: Dict[str, Any], models_db: Dict[str, Any]):
 
         _log_everywhere("finished finetune at %s" % traces.context().path)
         status_tracker.update_status("finished")
+        dist.destroy_process_group()
 
     # finetune_sequence relies on exit code to continue or stop
     except (SystemExit, KeyboardInterrupt):
-        # caught sigusr1, interrupt by watchdog or by user
-        # this has to be there, even if catch_sigusr1() already called exit with 99, otherwise exit code is zero
+        dist.destroy_process_group()
         exit(99)
     except Exception as e:
         traces.log(traceback.format_exc())
         _log_everywhere(f"Finetune has failed\nException: {e}")
         status_tracker.update_status("failed", error_message=str(e) or str(type(e)))
+        dist.destroy_process_group()
         raise e
 
 

@@ -24,7 +24,7 @@ def setup_encoding(
         repo_id, cache_dir=weights_path,
         trust_remote_code=True
     )
-    encoding.decode_utf8 = lambda x, *args, **kwargs: encoding.decode(x)
+    # Remove decode_utf8 assignment for compatibility
     encoding.EOT = model_config["tokenizer"]["eot_idx"]
     encoding.DIAMOND = model_config["tokenizer"]["padding_idx"]
     encoding.PREFIX = model_config["tokenizer"]["fim_prefix"]
@@ -49,7 +49,8 @@ def get_ds_len_per_epoch(
         jsonl_path=train_jsonl_path,
         model_config=model_config,
         encoding=encoding,
-        num_workers=multiprocessing.cpu_count(),
+        #num_workers=multiprocessing.cpu_count(),
+        num_workers=0,
         batch_size=1,
         ctx_size=cfg_builder.cfg['model_info']['ctx_size'],
         extra_options="quit_on_epoch=1",
@@ -106,7 +107,7 @@ def create_train_dataloader(
 
     mem = psutil.virtual_memory()
     if mem.total // 2 ** 30 <= 16:  # saving up a bunch of memory for low specs machines (<= 16Gb ram)
-        num_workers = 1
+        num_workers = 0
     num_workers = min(dataset.files_len - 1, num_workers)
     collation_fn = partial(data_parallel_split_and_collate_fn, global_batch_size=batch_size) \
         if parallel_collation else collate_fn
