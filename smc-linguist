@@ -1,0 +1,58 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH[0, 0] = File.join(File.dirname(__FILE__), '..', 'lib')
+
+require 'linguist'
+require 'json'
+require 'pathname'
+
+
+def smc_linguist()
+  breakdown = false
+  json_output = false
+  rev = 'HEAD'
+  path = Dir.pwd
+
+  path = "Gemfile"
+
+  while true
+    path = STDIN.gets
+    if path.nil?
+      break
+    end
+    path = path.chomp
+
+    if File.file?(path)
+      blob = Linguist::FileBlob.new(path, Dir.pwd)
+
+      type = if blob.text?
+        'Text'
+      elsif blob.image?
+        'Image'
+      else
+        'Binary'
+      end
+
+      puts JSON.generate( {
+        :path => path,
+        :lines => blob.loc,
+        :sloc => blob.sloc,
+        :type => type,
+        :mime_type => blob.mime_type,
+        :language => blob.language,
+        :large => blob.large?,
+        :generated => blob.generated?,
+        :vendored => blob.vendored?,
+        :digits_percent => blob.digits_percent?,
+      } )
+    else
+      puts JSON.generate( {
+        :path => path,
+        "error" => "file not found: #{path}",
+      } )
+    end
+    STDOUT.flush
+  end
+end
+
+smc_linguist()
