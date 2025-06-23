@@ -108,6 +108,15 @@ huggingface_mini_db = {
         },
         "filter_caps": ["completion", "chat"],
     },
+    "codellama/7b": {
+        "backend": "transformers",
+        "model_path": "codellama/CodeLlama-7b-hf",
+        "model_class_kwargs": {},
+        "required_memory_mb": 14000,
+        "T": 2048,
+        "filter_caps": ["completion", "finetune"],
+        "deprecated": True,
+    },
     # qwen 2.5-coder instruct models
     "qwen2.5/coder/1.5b/instruct": {
         "backend": "transformers",

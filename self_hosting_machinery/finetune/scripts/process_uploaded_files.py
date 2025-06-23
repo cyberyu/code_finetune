@@ -140,7 +140,7 @@ def get_source_type(filename: str) -> str:
         else:
             return "singlefile"
     elif os.path.isdir(filename) and os.path.exists(git_config) and os.path.isfile(git_config):
-        return "git"
+        return "git"  # This handles both git repos and local folders with git_config.json
     assert 0, f"Unknown source type for {filename}"
 
 
@@ -175,6 +175,11 @@ def _make_git_env():
     }
 
 
+def _is_git_url(url: str) -> bool:
+    """Check if the URL is a git repository URL (not a local filesystem path)"""
+    return url.startswith(('http://', 'https://', 'git://', 'ssh://')) or '@' in url
+
+
 def _prepare_git_repo(filepath: str, want_pull: bool) -> bool:
     sources_dir = os.path.join(filepath, "sources")
 
@@ -196,42 +201,103 @@ def _prepare_git_repo(filepath: str, want_pull: bool) -> bool:
         with open(os.path.join(filepath, "last_hash"), 'r') as f:
             return f.read()
 
-    if os.path.exists(sources_dir):
-        if not want_pull:
-            return False
+    def get_folder_mtime(folder_path: str) -> float:
+        """Get the latest modification time of any file in the folder recursively"""
+        latest_mtime = 0
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                try:
+                    mtime = os.path.getmtime(file_path)
+                    if mtime > latest_mtime:
+                        latest_mtime = mtime
+                except OSError:
+                    continue
+        return latest_mtime
 
-        completed_process = subprocess.run(
-            ["expect", "-f", GIT_EXE, "git", "-C", sources_dir, "pull"],
-            env=_make_git_env(),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            timeout=600)
-        log(f"git pull {filepath} => {'error' if completed_process.returncode else 'success'}")
-        if completed_process.returncode != 0:
-            raise Exception(completed_process.stdout.decode())
-        last_commit_hash = load_last_hash()
-        current_commit_hash = get_current_hash()
-        need_to_rescan = last_commit_hash != current_commit_hash
-        save_last_hash(current_commit_hash)
-        return need_to_rescan
+    def save_last_mtime(mtime: float):
+        with open(os.path.join(filepath, "last_mtime"), 'w') as f:
+            return f.write(str(mtime))
+
+    def load_last_mtime() -> float:
+        try:
+            with open(os.path.join(filepath, "last_mtime"), 'r') as f:
+                return float(f.read().strip())
+        except (FileNotFoundError, ValueError):
+            return 0
 
     with open(os.path.join(filepath, "git_config.json"), 'r') as f:
         config = json.load(f)
 
-    branch_args = ["-b", config["branch"]] if config["branch"] else []
-    completed_process = subprocess.run(
-        ["expect", "-f", GIT_EXE, "git", "-C", filepath, "clone", "--no-recursive",
-         "--depth", "1", *branch_args, config["url"], "sources"],
-        env=_make_git_env(),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
-    log(f"clone {filepath} repo => {'error' if completed_process.returncode else 'cloned'}")
-    if completed_process.returncode == 0:
-        commit_hash = get_current_hash()
-        if commit_hash is not None:
-            save_last_hash(commit_hash)
+    source_url = config["url"]
+    is_git_repo = _is_git_url(source_url)
+
+    if os.path.exists(sources_dir):
+        if not want_pull:
+            return False
+
+        if is_git_repo:
+            # Handle git repository update
+            completed_process = subprocess.run(
+                ["expect", "-f", GIT_EXE, "git", "-C", sources_dir, "pull"],
+                env=_make_git_env(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=600)
+            log(f"git pull {filepath} => {'error' if completed_process.returncode else 'success'}")
+            if completed_process.returncode != 0:
+                raise Exception(completed_process.stdout.decode())
+            last_commit_hash = load_last_hash()
+            current_commit_hash = get_current_hash()
+            need_to_rescan = last_commit_hash != current_commit_hash
+            save_last_hash(current_commit_hash)
+            return need_to_rescan
+        else:
+            # Handle local folder update - check if source folder has been modified
+            if not os.path.exists(source_url):
+                raise Exception(f"Local source folder does not exist: {source_url}")
+            
+            current_mtime = get_folder_mtime(source_url)
+            last_mtime = load_last_mtime()
+            need_to_rescan = current_mtime > last_mtime
+            
+            if need_to_rescan:
+                log(f"Local folder {source_url} has been modified, copying updated files")
+                # Remove existing sources and copy fresh
+                subprocess.check_call(["rm", "-rf", sources_dir])
+                subprocess.check_call(["cp", "-r", source_url, sources_dir])
+                save_last_mtime(current_mtime)
+            else:
+                log(f"Local folder {source_url} has not been modified, skipping copy")
+            
+            return need_to_rescan
+
+    # Initial setup - clone git repo or copy local folder
+    if is_git_repo:
+        # Clone git repository
+        branch_args = ["-b", config["branch"]] if config.get("branch") else []
+        completed_process = subprocess.run(
+            ["expect", "-f", GIT_EXE, "git", "-C", filepath, "clone", "--no-recursive",
+             "--depth", "1", *branch_args, source_url, "sources"],
+            env=_make_git_env(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        log(f"clone {filepath} repo => {'error' if completed_process.returncode else 'cloned'}")
+        if completed_process.returncode == 0:
+            commit_hash = get_current_hash()
+            if commit_hash is not None:
+                save_last_hash(commit_hash)
+        else:
+            raise Exception(completed_process.stdout.decode())
     else:
-        raise Exception(completed_process.stdout.decode())
+        # Copy local folder
+        if not os.path.exists(source_url):
+            raise Exception(f"Local source folder does not exist: {source_url}")
+        
+        log(f"Copying local folder from {source_url} to {sources_dir}")
+        subprocess.check_call(["cp", "-r", source_url, sources_dir])
+        current_mtime = get_folder_mtime(source_url)
+        save_last_mtime(current_mtime)
 
     return True
 
