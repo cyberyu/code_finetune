@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fine-tune Data Generation Analysis</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+        .key-finding {
+            background-color: #e8f4f8;
+            border-left: 5px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .parameter-box {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .code-snippet {
+            background-color: #282c34;
+            color: #abb2bf;
+            border: 1px solid #4f5b66;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            white-space: pre;
+            position: relative;
+        }
+        .code-snippet::before {
+            content: "Python";
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background-color: #61afef;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .code-snippet.config::before {
+            content: "JavaScript";
+            background-color: #f7df1e;
+            color: #333;
+        }
+        .code-snippet.inline {
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 0 2px;
+            background-color: #f8f8f8;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            white-space: nowrap;
+            position: static;
+        }
+        .code-snippet.inline::before {
+            display: none;
+        }
+        .formula {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .file-path {
+            color: #666;
+            font-family: monospace;
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .stats-table th, .stats-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .stats-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .pipeline-flow {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            align-items: center;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .pipeline-step {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .arrow {
+            font-size: 20px;
+            color: #3498db;
+            margin: 0 10px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        ul li {
+            margin-bottom: 8px;
+        }
+        .summary-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fine-tune Data Generation Analysis</h1>
+        <p><strong>Analysis Date:</strong> July 7, 2025</p>
+        <p><strong>Objective:</strong> Investigation of control parameters that determine the length of input texts in FIM (Fill-in-the-Middle) training batches</p>
+
+        <div class="key-finding">
+            <h3>🔍 Key Discovery</h3>
+            <p>The primary control parameter for sequence length in FIM training is <strong><span class="code-snippet inline">model_ctx_size</span></strong>, which defaults to <span class="highlight">2048 tokens</span> and directly controls the observed long input texts (6K-10K characters) in training batches.</p>
+        </div>
+
+        <h2>📊 Observed Data Evidence</h2>
+        <div class="parameter-box">
+            <h3>Sample Input Text Lengths</h3>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Sample Character Lengths</th>
+                        <th>Estimated Token Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="file-path">fim_ar_batches_qwen.jsonl</span></td>
+                        <td>9962, 10379, 6368 characters</td>
+                        <td>~2000-2500 tokens</td>
+                    </tr>
+                    <tr>
+                        <td><span class="file-path">plain_text_ar_batches_qwen.jsonl</span></td>
+                        <td>Similar long sequences</td>
+                        <td>~2000-2500 tokens</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><em>Note: Conversion ratio approximately 3-5 characters per token</em></p>
+        </div>
+
+        <h2>⚙️ Primary Control Parameter</h2>
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">model_ctx_size</span></h3>
+            <p><strong>Location:</strong> <span class="file-path">/usr/project/refact/ec2copy_delete/ec2copy_enterprise/refact_webgui/webgui/static/tab-finetune.js</span></p>
+            <p><strong>Default Value:</strong> <span class="highlight">2048 tokens</span></p>
+            <p><strong>Available Options:</strong></p>
+            <div class="code-snippet config">values: [
+    'auto', 
+    128, 
+    256, 
+    512, 
+    1024, 
+    2048,  // Default value
+    4096
+]</div>
+            <p><strong>Description:</strong> Controls the maximum context/sequence length for training samples. This parameter directly determines how long each FIM training sample can be.</p>
+        </div>
+
+        <h2>🔄 FIM Data Pipeline Flow</h2>
+        <div class="pipeline-flow">
+            <div class="pipeline-step">File Reading</div>
+            <span class="arrow">→</span>
+            <div class="pipeline-step">Tokenization</div>
+            <span class="arrow">→</span>
+            <div class="pipeline-step">Chunking</div>
+            <span class="arrow">→</span>
+            <div class="pipeline-step">FIM Generation</div>
+            <span class="arrow">→</span>
+            <div class="pipeline-step">Packing</div>
+            <span class="arrow">→</span>
+            <div class="pipeline-step">Training</div>
+        </div>
+
+        <h2>📁 Key Source Files Analysis</h2>
+        
+        <h3>FIM Generation Logic</h3>
+        <div class="parameter-box">
+            <p><strong>File:</strong> <span class="file-path">/usr/project/refact/dockercode2_back/refact_data_pipeline/filters_fim_v2.py</span></p>
+            <p><strong>Function:</strong> Contains the main FIM sample generation logic using sliding window approach</p>
+            <p><strong>Key Features:</strong></p>
+            <ul>
+                <li>Processes code files using sliding window methodology</li>
+                <li>Generates multiple FIM samples per file based on <span class="code-snippet inline">model_ctx_size</span></li>
+                <li>Implements chunking logic to determine sample boundaries</li>
+            </ul>
+        </div>
+
+        <h3>Dataset Pipeline Structure</h3>
+        <div class="parameter-box">
+            <p><strong>File:</strong> <span class="file-path">/usr/project/refact/dockercode2_back/refact_data_pipeline/finetune_datasource.py</span></p>
+            <p><strong>Purpose:</strong> Defines the overall dataset processing pipeline</p>
+        </div>
+
+        <h3>Packing Logic</h3>
+        <div class="parameter-box">
+            <p><strong>File:</strong> <span class="file-path">/usr/project/refact/dockercode2_back/refact_data_pipeline/filters_packing.py</span></p>
+            <p><strong>Function:</strong> DensePacker combines multiple samples into training batches</p>
+        </div>
+
+        <h2>📐 Sample Generation Formula</h2>
+        <div class="formula">
+            Number of FIM samples per file = ceil(total_file_tokens / model_ctx_size)
+        </div>
+        <p>This formula explains why files generate multiple FIM samples and how the <span class="code-snippet inline">model_ctx_size</span> parameter directly controls the number of samples extracted from each code file.</p>
+
+        <h3>🔍 Exact Source Code Implementation</h3>
+        <div class="parameter-box">
+            <p><strong>File:</strong> <span class="file-path">/usr/project/refact/dockercode2_back/refact_data_pipeline/filters_fim_v2.py</span></p>
+            <p><strong>Class:</strong> <span class="code-snippet inline">FIMv2(PipelineNode)</span></p>
+            <p><strong>Key Implementation:</strong></p>
+            <div class="code-snippet">class FIMv2(PipelineNode):
+    def __init__(self, inner_filter, dataopts: DatasetOpts):
+        self.enc = dataopts.encoding
+        super().__init__(dataopts)
+        self.inner_filter = inner_filter
+        # ← model_ctx_size parameter
+        self.n_ctx = dataopts.get("n_ctx", 2048)
+        self.fim_probability = dataopts.get("fim_probability", 0.5)
+        self.fim_drop_residuals = bool(dataopts.get("fim_drop_residuals", 0))
+        self.extra_payload_size = int(self.n_ctx * 0.03)
+        # ...other initialization parameters...
+
+    def __iter__(self):
+        stats = {
+            "fim_unicode_split": 0, 
+            "fim_unable_to_split": 0,
+            "fim_out": 0, 
+            "fim_lowlines_skip": 0
+        }
+        
+        for sample in self.inner_filter:
+            text = sample["text"]
+            
+            # STEP 1: Tokenize entire file
+            tokens = self.enc.encode(text)  # ← total_file_tokens
+            cursor = 0
+            
+            # STEP 2: Sliding window loop 
+            # implements ceil(total_tokens/ctx_size)
+            while cursor < len(tokens):
+                # ← continues until all tokens processed
+                
+                if self.random_state.random() > self.fim_probability:
+                    output_data, cursor = self._generate_plain_text(
+                        tokens, cursor, sample, stats
+                    )
+                else:
+                    output_data, cursor = self._generate_fim(
+                        tokens, cursor, sample, stats
+                    )
+                
+                if output_data is not None:
+                    yield output_data  # ← Each iteration = 1 training sample
+                
+                if self.fim_drop_residuals:
+                    break  # Only generate one sample if dropping residuals
+
+    def _generate_plain_text(self, tokens, cursor, sample, stats):
+        # STEP 3: Extract chunk of exactly model_ctx_size tokens
+        plain = tokens[cursor: cursor + self.n_ctx]
+        # ← chunk size = model_ctx_size
+        cursor += len(plain)  # ← advance cursor by chunk size
+        
+        # ...mask and EOT token processing...
+        mask = [1] * len(plain)
+        if len(plain) > 0:
+            mask[-1] = 0  # EOT token mask
+            
+        return {"tokens": plain, "mask": mask, "stats": stats}, cursor
+
+    def _generate_fim(self, tokens, cursor, sample, stats):
+        # Calculate payload size for FIM special tokens
+        payload_size = (0 if len(tokens) < (self.n_ctx - self.extra_payload_size) 
+                       else self.extra_payload_size)
+        
+        # STEP 3: Extract chunk of model_ctx_size minus payload
+        pre_fim_toks = tokens[cursor: cursor + self.n_ctx - payload_size]
+        cursor += len(pre_fim_toks)  # ← advance cursor by chunk size
+        
+        # ...FIM splitting and formatting logic...
+        # Split into PREFIX, SUFFIX, INFILL sections
+        # Add special tokens and create mask
+        
+        return {"tokens": formatted_tokens, "mask": mask, "stats": stats}, cursor</div>
+        </div>
+
+        <h3>🔧 How the Formula Works</h3>
+        <div class="parameter-box">
+            <h4>Step-by-Step Execution:</h4>
+            <ol>
+                <li><strong>File Tokenization:</strong> <span class="code-snippet inline">tokens = self.enc.encode(text)</span> creates <span class="code-snippet inline">total_file_tokens</span></li>
+                <li><strong>Cursor Initialization:</strong> <span class="code-snippet inline">cursor = 0</span> starts at beginning of token array</li>
+                <li><strong>Sliding Window Loop:</strong> <span class="code-snippet inline">while cursor < len(tokens):</span> continues until all tokens processed</li>
+                <li><strong>Chunk Extraction:</strong> Each iteration takes <span class="code-snippet inline">model_ctx_size</span> tokens: <span class="code-snippet inline">tokens[cursor: cursor + self.n_ctx]</span></li>
+                <li><strong>Cursor Advancement:</strong> <span class="code-snippet inline">cursor += len(chunk)</span> moves to next position</li>
+                <li><strong>Sample Generation:</strong> Each iteration yields one training sample</li>
+            </ol>
+            
+            <h4>Mathematical Relationship:</h4>
+            <ul>
+                <li><strong>Loop iterations:</strong> <span class="code-snippet inline">ceil(len(tokens) / self.n_ctx)</span></li>
+                <li><strong>Where:</strong> <span class="code-snippet inline">len(tokens) = total_file_tokens</span></li>
+                <li><strong>And:</strong> <span class="code-snippet inline">self.n_ctx = model_ctx_size</span></li>
+                <li><strong>Result:</strong> <span class="code-snippet inline">ceil(total_file_tokens / model_ctx_size)</span> samples per file</li>
+            </ul>
+        </div>
+
+        <h3>🎯 Parameter Mapping</h3>
+        <div class="parameter-box">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Formula Variable</th>
+                        <th>Code Variable</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="code-snippet inline">total_file_tokens</span></td>
+                        <td><span class="code-snippet inline">len(tokens)</span></td>
+                        <td>Result of <span class="code-snippet inline">self.enc.encode(text)</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-snippet inline">model_ctx_size</span></td>
+                        <td><span class="code-snippet inline">self.n_ctx</span></td>
+                        <td>Set from configuration parameter</td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-snippet inline">ceil()</span> operation</td>
+                        <td><span class="code-snippet inline">while cursor < len(tokens)</span></td>
+                        <td>Implicit through loop continuation</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>🔧 Additional Control Parameters</h2>
+        
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">fim_drop_residuals</span></h3>
+            <p><strong>Type:</strong> Boolean (default: False)</p>
+            <p><strong>Function:</strong> Controls whether to drop incomplete samples that don't fill the full context size</p>
+            <p><strong>Source:</strong> <span class="code-snippet inline">self.fim_drop_residuals = bool(dataopts.get("fim_drop_residuals", 0))</span></p>
+            <p><strong>Impact:</strong> When True, only generates one sample per file instead of sliding window approach</p>
+        </div>
+
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">extra_payload_size</span></h3>
+            <p><strong>Calculation:</strong> <span class="code-snippet inline">int(self.n_ctx * 0.03)</span> (3% of context size)</p>
+            <p><strong>Purpose:</strong> Buffer space reserved for FIM special tokens (PREFIX, SUFFIX, INFILL, EOT)</p>
+            <p><strong>Default Value:</strong> ~61 tokens (for 2048 context size)</p>
+            <p><strong>Usage:</strong> Ensures FIM samples don't exceed context limit after adding special tokens</p>
+        </div>
+
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">fim_probability</span></h3>
+            <p><strong>Type:</strong> Float (default: 0.5)</p>
+            <p><strong>Function:</strong> Probability of generating FIM sample vs. plain autoregressive sample</p>
+            <p><strong>Source:</strong> <span class="code-snippet inline">self.fim_probability = dataopts.get("fim_probability", 0.5)</span></p>
+            <p><strong>Control:</strong> Each chunk has 50% chance of being FIM format vs. plain text</p>
+        </div>
+
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">smp_prob</span></h3>
+            <p><strong>Type:</strong> Float (default: 0.5)</p>
+            <p><strong>Function:</strong> Controls FIM token ordering (PREFIX-first vs SUFFIX-first)</p>
+            <p><strong>Source:</strong> <span class="code-snippet inline">self.smp_prob = dataopts.get("smp_prob", 0.5)</span></p>
+            <p><strong>Impact:</strong> Randomizes FIM format to improve model robustness</p>
+        </div>
+
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">tkr_stochastic_tokens</span></h3>
+            <p><strong>Type:</strong> Integer (default: 3)</p>
+            <p><strong>Function:</strong> Controls stochastic tokenization for data augmentation</p>
+            <p><strong>Usage:</strong> When encoder supports <span class="code-snippet inline">encode_stochastic</span>, adds variability to tokenization</p>
+        </div>
+
+        <div class="parameter-box">
+            <h3><span class="code-snippet inline">random_trim_context_prob</span></h3>
+            <p><strong>Type:</strong> Float (default: 0.0)</p>
+            <p><strong>Function:</strong> Probability of randomly trimming file content before processing</p>
+            <p><strong>Purpose:</strong> Additional data augmentation to improve model generalization</p>
+        </div>
+
+        <h2>🎛️ Configuration Interface</h2>
+        <div class="parameter-box">
+            <p>The <span class="code-snippet inline">model_ctx_size</span> parameter is user-configurable through the web interface in the finetune settings modal. Users can select from predefined values ranging from 128 to 4096 tokens, with 'auto' option available.</p>
+            <p><strong>UI Location:</strong> Finetune settings modal → "Context Size" dropdown</p>
+        </div>
+
+        <h2>💡 Training Defaults</h2>
+        <div class="parameter-box">
+            <p>The default training configuration sets <span class="code-snippet inline">model_ctx_size: 2048</span>, which explains the observed long sequences in the sample data files. This 2048-token limit correlates with the 6K-10K character observations (assuming ~3-5 characters per token).</p>
+        </div>
+
+        <div class="summary-box">
+            <h2>📋 Summary</h2>
+            <p>The investigation successfully identified <strong><span class="code-snippet inline">model_ctx_size</span></strong> as the primary parameter controlling FIM training sequence length. The default value of 2048 tokens directly explains the long input texts observed in the training batch files. The parameter is configurable up to 4096 tokens through the web UI, and the FIM pipeline uses a sliding window approach to generate multiple samples per code file based on this context size limit.</p>
+            
+            <p><strong>Impact:</strong> Modifying <span class="code-snippet inline">model_ctx_size</span> will directly affect:</p>
+            <ul>
+                <li>Length of individual training samples</li>
+                <li>Number of samples generated per code file</li>
+                <li>Memory requirements during training</li>
+                <li>Model's maximum context understanding capability</li>
+            </ul>
+            
+            <h3>🎯 Key Source Code Insights:</h3>
+            <ul>
+                <li><strong>Sliding Window Implementation:</strong> The <span class="code-snippet inline">while cursor < len(tokens)</span> loop in <span class="code-snippet inline">__iter__</span> naturally implements ceiling division</li>
+                <li><strong>Dual Sample Types:</strong> Each iteration can generate either FIM or plain text samples based on <span class="code-snippet inline">fim_probability</span></li>
+                <li><strong>Context Size Management:</strong> <span class="code-snippet inline">self.n_ctx</span> (model_ctx_size) directly controls chunk extraction size</li>
+                <li><strong>Special Token Handling:</strong> <span class="code-snippet inline">extra_payload_size</span> reserves 3% of context for FIM special tokens</li>
+                <li><strong>Data Augmentation:</strong> Multiple parameters (smp_prob, tkr_stochastic_tokens, random_trim_context_prob) provide training variability</li>
+            </ul>
+        </div>
+
+        <h2>📚 Related Files Analyzed</h2>
+        <ul>
+            <li><span class="file-path">fim_ar_batches_qwen.jsonl</span> - Sample FIM training data</li>
+            <li><span class="file-path">plain_text_ar_batches_qwen.jsonl</span> - Plain text training batch data</li>
+            <li><span class="file-path">tab-finetune.js</span> - Web UI configuration interface</li>
+            <li><span class="file-path">filters_fim_v2.py</span> - FIM generation implementation</li>
+            <li><span class="file-path">finetune_datasource.py</span> - Dataset pipeline structure</li>
+            <li><span class="file-path">filters_packing.py</span> - Batch packing logic</li>
+        </ul>
+
+        <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; text-align: center;">
+            <p>Analysis completed on July 7, 2025 | Investigation of FIM training data generation parameters</p>
+        </footer>
+    </div>
+</body>
+</html>
