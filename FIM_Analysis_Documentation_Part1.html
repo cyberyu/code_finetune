@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill-in-the-Middle (FIM) Training Data Format & Random Ordering Analysis - Part 1</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+        }
+        h4 {
+            color: #2980b9;
+            margin-top: 20px;
+        }
+        .code-block {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #4299e1;
+        }
+        .code-block pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .format-comparison {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .format-box {
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        .format-1 {
+            background-color: #e8f5e8;
+            border-color: #4caf50;
+        }
+        .format-2 {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+        .probability {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .key-finding {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .token-sequence {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            border-left: 4px solid #007bff;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .special-token {
+            color: #d73a49;
+            font-weight: bold;
+        }
+        .content-token {
+            color: #005cc5;
+        }
+        .masked-token {
+            color: #6f42c1;
+            font-style: italic;
+        }
+        .code-snippet {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #4299e1;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        .toc a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .important {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .success {
+            background-color: #d1e7dd;
+            border: 1px solid #badbcc;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #0f5132;
+        }
+        .highlight {
+            background-color: #cfe2ff;
+            border: 1px solid #b6d4fe;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #084298;
+        }
+        .flow-diagram {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        .flow-diagram div {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .arrow {
+            font-size: 18px;
+            color: #3498db;
+            margin: 10px 0;
+        }
+        .part-navigation {
+            background-color: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .part-navigation h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .part-navigation a {
+            display: inline-block;
+            background-color: #2196f3;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .part-navigation a:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fill-in-the-Middle (FIM) Training Data Format & Random Ordering Analysis - Part 1</h1>
+        
+        <div class="toc">
+            <h3>Table of Contents - Part 1</h3>
+            <ul>
+                <li><a href="#executive-summary">1. Executive Summary</a></li>
+                <li><a href="#overview">2. Overview</a></li>
+                <li><a href="#key-findings">3. Key Findings</a></li>
+                <li><a href="#random-ordering">4. Two-Level Randomization Mechanism</a></li>
+                <li><a href="#token-construction">5. Token Context Construction & Step-by-Step Flow</a></li>
+                <li><a href="#model-variants">6. Model Variants & Summary Table</a></li>
+            </ul>
+        </div>
+
+        <h2 id="executive-summary">1. Executive Summary</h2>
+        <div class="key-finding">
+            <strong>Key Discovery:</strong> The FIM implementation uses a <b>two-level randomization strategy</b> for training: (1) random selection between plain text and FIM tasks, and (2) random ordering of prefix/suffix context within FIM tasks. This approach increases model robustness, flexibility, and real-world applicability.
+        </div>
+
+        <h2 id="overview">2. Overview</h2>
+        <p>This document presents a comprehensive analysis of the Fill-in-the-Middle (FIM) training data format and random ordering implementation. FIM is a crucial technique for training code completion models that can generate code given both prefix (before cursor) and suffix (after cursor) context. The randomization strategies described here are used in production for models such as StarCoder, StarCoder2, CodeLlama, and Qwen2.5.</p>
+
+        <h2 id="key-findings">3. Key Findings</h2>
+        <ul>
+            <li><b>Dual Task Training:</b> Models are trained on both plain text and FIM data, with the ratio controlled by <code>fim_probability</code>.</li>
+            <li><b>Random FIM Ordering:</b> FIM tasks use a 50/50 random split between two token orderings (PREFIX-first and SUFFIX-first), controlled by <code>spm_prob</code>.</li>
+            <li><b>Model Robustness:</b> This strategy prevents order bias and enables models to handle diverse prompt formats at inference time.</li>
+            <li><b>Model-Specific Differences:</b> StarCoder and StarCoder2 use random ordering with different implementations; CodeLlama uses random ordering with BOS token; Qwen2.5 uses a fixed order (PREFIX-SUFFIX-INFILL).</li>
+        </ul>
+
+        <h2 id="random-ordering">4. Two-Level Randomization Mechanism</h2>
+        
+        <div class="important">
+            <strong>🚨 COMPREHENSIVE TRAINING STRATEGY:</strong> The fine-tuning process generates two task types with nested randomization!
+        </div>
+
+        <h3>4.1 Level 1: Task Type Selection (Plain Text vs FIM)</h3>
+        <div class="code-block">
+            <pre># In FIMv2.__iter__() - Line 258
+if self.random_state.random() > self.fim_probability:
+    output_data, cursor = self._generate_plain_text(tokens, cursor, sample, stats)
+else:
+    output_data, cursor = self._generate_fim(tokens, cursor, sample, stats)
+            </pre>
+        </div>
+        
+        <p><b>Production Example:</b> 90% FIM, 10% plain text. Development: 50/50 split.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Configuration</th>
+                    <th>fim_probability</th>
+                    <th>Plain Text</th>
+                    <th>FIM Tasks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Production</strong></td>
+                    <td>0.9</td>
+                    <td><span class="probability">10%</span></td>
+                    <td><span class="probability">90%</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Development</strong></td>
+                    <td>0.5</td>
+                    <td><span class="probability">50%</span></td>
+                    <td><span class="probability">50%</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>4.2 Level 2: FIM Random Ordering (within FIM tasks)</h3>
+        <div class="code-block">
+            <pre># In _fim_format() - Line 447 (only applies to FIM tasks)
+if self.random_state.random() < self.smp_prob:
+    # Format 1: PREFIX-SUFFIX order (50% probability)
+    tokens_context = ([self.enc.PREFIX] + prefix_toks + 
+                     [self.enc.SUFFIX] + suffix_toks)
+else:
+    # Format 2: SUFFIX-PREFIX order (50% probability)  
+    tokens_context = ([self.enc.SUFFIX] + suffix_toks + 
+                     [self.enc.PREFIX] + prefix_toks)
+
+# Final sequence assembly
+tokens = tokens_context + [self.enc.INFILL] + middle_toks + [self.enc.EOT]
+mask = mask_context + [0] + middle_mask + [1]
+            </pre>
+        </div>
+        
+        <div class="probability">
+            <strong>Probability Control:</strong> <code>smp_prob</code> (default: 0.5) creates a 50/50 split between the two FIM formats.
+        </div>
+        
+        <div class="key-finding">
+            <b>Strategic Benefits:</b> This two-level randomization provides robustness, flexibility, and order-agnostic inference for code completion models.
+        </div>
+
+        <h3>4.3 Complete Training Data Distribution</h3>
+        
+        <h4>Production Configuration (90% FIM):</h4>
+        <div class="flow-diagram">
+            <div><strong>100% Total Training Data</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>10% Plain Text Tasks</strong> | <strong>90% FIM Tasks</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>10% Plain Text</strong> | <strong>45% FIM Format 1</strong> | <strong>45% FIM Format 2</strong></div>
+        </div>
+
+        <h4>Development Configuration (50% FIM):</h4>
+        <div class="flow-diagram">
+            <div><strong>100% Total Training Data</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>50% Plain Text Tasks</strong> | <strong>50% FIM Tasks</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>50% Plain Text</strong> | <strong>25% FIM Format 1</strong> | <strong>25% FIM Format 2</strong></div>
+        </div>
+
+        <h3>4.4 Training Record Generation Flow</h3>
+        <div class="code-block">
+            <pre># Step 1: Task Type Decision
+task_type = "fim" if random() < fim_probability else "plain_text"
+
+# Step 2: FIM Format Decision (only if FIM was selected)
+if task_type == "fim":
+    fim_format = "prefix_suffix" if random() < smp_prob else "suffix_prefix"
+            </pre>
+        </div>
+
+        <h3>4.5 Example Training Records by Type</h3>
+
+        <h4>Plain Text Record (10%/50% of data):</h4>
+        <div class="code-block">
+            <pre>{
+  "prompt": "",
+  "output": "def calculate(x):\n    return x * 2",
+  "tokens": [2763, 8961, 7, 87, 2599, 198, 220, 220, 220, 220, 736, 2124, 1635, 362],
+  "mask": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  "type": "plain_text"
+}
+            </pre>
+        </div>
+
+        <h4>FIM Record Format 1 (45%/25% of data):</h4>
+        <div class="code-block">
+            <pre>{
+  "prompt": "def calculate(",
+  "output": "x * 2",
+  "suffix": "):\n    return result",
+  "tokens": [1, 2763, 8961, 7, 3, 2599, 198, 220, 220, 220, 220, 736, 1255, 2, 87, 1635, 362, 0],
+  "mask": [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
+  "type": "fim_format_1"
+}
+            </pre>
+        </div>
+
+        <h4>FIM Record Format 2 (45%/25% of data):</h4>
+        <div class="code-block">
+            <pre>{
+  "prompt": "def calculate(",
+  "output": "x * 2", 
+  "suffix": "):\n    return result",
+  "tokens": [3, 2599, 198, 220, 220, 220, 220, 736, 1255, 1, 2763, 8961, 7, 2, 87, 1635, 362, 0],
+  "mask": [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1],
+  "type": "fim_format_2"
+}
+            </pre>
+        </div>
+
+        <div class="success">
+            <h3>✅ Two-Level Randomization Summary</h3>
+            <p>The fine-tuning process has:</p>
+            <ol>
+                <li><strong>🎯 Primary Task Selection:</strong> Plain Text (10%/50%) vs FIM (90%/50%)</li>
+                <li><strong>🔄 Secondary FIM Randomization:</strong> Within FIM tasks, 50/50 split between two random orderings</li>
+            </ol>
+            <p>This creates a sophisticated, multi-layered training strategy that produces robust, versatile code completion models capable of handling diverse real-world scenarios.</p>
+        </div>
+
+        <h2 id="token-construction">5. Token Context Construction & Step-by-Step Flow</h2>
+        
+        <div class="format-comparison">
+            <div class="format-box format-1">
+                <h3>Format 1: PREFIX-First</h3>
+                <div class="token-sequence">
+                    <span class="special-token">&lt;PREFIX&gt;</span>
+                    <span class="content-token">[prefix_tokens]</span>
+                    <span class="special-token">&lt;SUFFIX&gt;</span>
+                    <span class="content-token">[suffix_tokens]</span>
+                    <span class="special-token">&lt;INFILL&gt;</span>
+                    <span class="content-token">[middle_tokens]</span>
+                    <span class="special-token">&lt;EOT&gt;</span>
+                </div>
+            </div>
+            <div class="format-box format-2">
+                <h3>Format 2: SUFFIX-First</h3>
+                <div class="token-sequence">
+                    <span class="special-token">&lt;SUFFIX&gt;</span>
+                    <span class="content-token">[suffix_tokens]</span>
+                    <span class="special-token">&lt;PREFIX&gt;</span>
+                    <span class="content-token">[prefix_tokens]</span>
+                    <span class="special-token">&lt;INFILL&gt;</span>
+                    <span class="content-token">[middle_tokens]</span>
+                    <span class="special-token">&lt;EOT&gt;</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>5.1 Mask Interpretation</h3>
+        <table>
+            <tr><th>Mask Value</th><th>Meaning</th><th>Training Behavior</th></tr>
+            <tr><td>0</td><td>Input/Context</td><td>Model sees but doesn't predict (no loss)</td></tr>
+            <tr><td>1</td><td>Target/Output</td><td>Model must predict (contributes to loss)</td></tr>
+        </table>
+
+        <h3>5.2 Special Tokens Used</h3>
+        <table>
+            <tr><th>Token</th><th>Purpose</th><th>Position</th></tr>
+            <tr><td><code>PREFIX</code></td><td>Marks beginning of prefix content</td><td>Before prefix tokens</td></tr>
+            <tr><td><code>SUFFIX</code></td><td>Marks beginning of suffix content</td><td>Before suffix tokens</td></tr>
+            <tr><td><code>INFILL</code></td><td>Marks beginning of target content</td><td>Before middle tokens</td></tr>
+            <tr><td><code>EOT</code></td><td>End of text marker</td><td>End of sequence</td></tr>
+        </table>
+
+        <h3>5.3 Step-by-Step Token Flow in the Training Pipeline</h3>
+        
+        <div class="flow-diagram">
+            <div><strong>1. FIM Token Generation</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>2. Sequence Packing</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>3. Data Collation</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>4. Autoregressive Transformation</strong></div>
+            <div class="arrow">⬇️</div>
+            <div><strong>5. Training Loop Consumption</strong></div>
+        </div>
+
+        <h4>FIM Token Generation Example</h4>
+        <div class="code-block">
+            <pre># Random ordering and token construction
+if self.random_state.random() < self.smp_prob:
+    tokens_context = [self.enc.PREFIX] + prefix_toks + [self.enc.SUFFIX] + suffix_toks
+    mask_context = [0] + [1] * len(prefix_toks) + [0] + [1] * len(suffix_toks)
+else:
+    tokens_context = [self.enc.SUFFIX] + suffix_toks + [self.enc.PREFIX] + prefix_toks
+    mask_context = [0] + [1] * len(suffix_toks) + [0] + [1] * len(prefix_toks)
+
+# Final sequence assembly
+tokens = tokens_context + [self.enc.INFILL] + middle_toks + [self.enc.EOT]
+mask = mask_context + [0] + middle_mask + [1]
+            </pre>
+        </div>
+
+        <h4>Autoregressive Transformation</h4>
+        <div class="code-block">
+            <pre># Key transformation for autoregressive training
+def _after_collate(self, batch):
+    tokens = batch['tokens']  # Shape: [batch_size, seq_len]
+    mask = batch['mask']      # Shape: [batch_size, seq_len]
+    
+    # Create input and target sequences for autoregressive training
+    input_tokens = tokens[:, :-1]     # Remove last token -> token_context
+    target_tokens = tokens[:, 1:]     # Remove first token -> label_context  
+    target_mask = mask[:, 1:]         # Align mask with targets
+    
+    return {
+        'input_ids': input_tokens,      # What model sees as input
+        'labels': target_tokens,        # What model should predict
+        'attention_mask': target_mask   # Which predictions to compute loss on
+    }
+            </pre>
+        </div>
+
+        <table>
+            <thead>
+                <tr><th>Sequence Type</th><th>Content</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>token_context</strong> (input_ids)</td><td>[PREFIX, code1, code2, SUFFIX, code3, INFILL, pred1, pred2]</td><td>What model sees as input</td></tr>
+                <tr><td><strong>label_context</strong> (labels)</td><td>[code1, code2, SUFFIX, code3, INFILL, pred1, pred2, EOT]</td><td>What model should predict</td></tr>
+                <tr><td><strong>attention_mask</strong></td><td>[1, 1, 0, 1, 0, 1, 1, 1]</td><td>Which positions contribute to loss</td></tr>
+            </tbody>
+        </table>
+
+        <div class="highlight">
+            <strong>Critical Realization:</strong> The random ordering in FIM generation creates diverse training examples, but the autoregressive transformation ensures the model learns proper conditional dependencies regardless of the initial token order.
+        </div>
+
+        <h2 id="model-variants">6. Model Variants & Summary Table</h2>
+
+        <h3>6.1 StarCoder (FIM - Original Implementation)</h3>
+        <p>The original StarCoder implementation uses the <code>FIM</code> class from <code>filters_fim.py</code>. It implements the same random ordering strategy as StarCoder2 but with some differences in the processing pipeline:</p>
+        
+        <div class="format-comparison">
+            <div class="format-box format-1">
+                <h4>StarCoder Format 1</h4>
+                <div class="token-sequence">
+                    <span class="special-token">&lt;PREFIX&gt;</span>
+                    <span class="content-token">[prefix]</span>
+                    <span class="special-token">&lt;SUFFIX&gt;</span>
+                    <span class="content-token">[suffix]</span>
+                    <span class="special-token">&lt;INFILL&gt;</span>
+                    <span class="content-token">[middle]</span>
+                    <span class="special-token">&lt;EOT&gt;</span>
+                </div>
+            </div>
+            <div class="format-box format-2">
+                <h4>StarCoder Format 2</h4>
+                <div class="token-sequence">
+                    <span class="special-token">&lt;SUFFIX&gt;</span>
+                    <span class="content-token">[suffix]</span>
+                    <span class="special-token">&lt;PREFIX&gt;</span>
+                    <span class="content-token">[prefix]</span>
+                    <span class="special-token">&lt;INFILL&gt;</span>
+                    <span class="content-token">[middle]</span>
+                    <span class="special-token">&lt;EOT&gt;</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-block">
+            <pre># StarCoder FIM Implementation (filters_fim.py)
+if self.random_state.random() < 0.5:
+    tokens_context = [self.enc.PREFIX] + prefix_toks + [self.enc.SUFFIX] + suffix_toks
+    mask_context = [0] + [1] * len(prefix_toks) + [0] + [1] * len(suffix_toks)
+else:
+    tokens_context = [self.enc.SUFFIX] + suffix_toks + [self.enc.PREFIX] + prefix_toks
+    mask_context = [0] + [1] * len(suffix_toks) + [0] + [1] * len(prefix_toks)
+
+# Final sequence
+yield {
+    "tokens": tokens_context + [self.enc.INFILL] + middle_toks + [self.enc.EOT],
+    "mask": mask_context + [0] + middle_mask + [1],
+    "first": [1] + [0] * (len(tokens_context) + len(middle_toks)),
+    "stats": {**sample["stats"], **stats},
+}
+            </pre>
+        </div>
+
+        <div class="highlight">
+            <strong>Key Differences from StarCoder2:</strong>
+            <ul>
+                <li>Uses hardcoded 0.5 probability instead of configurable <code>smp_prob</code></li>
+                <li>Simpler text splitting logic with <code>SymbolsMiddleSplit</code></li>
+                <li>Different context size handling and chunking strategy</li>
+                <li>No debug output or JSONL dumping functionality</li>
+            </ul>
+        </div>
+
+        <h3>6.2 StarCoder2 (FIMv2)</h3>
+        <p>Uses both FIM random orderings (PREFIX-first and SUFFIX-first) with equal probability. No BOS token.</p>
+
+        <h3>6.3 CodeLlama (FIMv2CodeLlama)</h3>
+        <p>Uses both FIM random orderings, but includes a BOS token and follows the official CodeLlama FIM format.</p>
+        
+        <div class="format-comparison">
+            <div class="format-box format-1">
+                <h4>CodeLlama Format 1</h4>
+                <div class="token-sequence">
+                    <span class="special-token">&lt;BOS&gt;</span>
+                    <span class="special-token">&lt;PREFIX&gt;</span>
+                    <span class="content-token">[prefix]</span>
+                    <span class="special-token">&lt;SUFFIX&gt;</span>
+                    <span class="content-token">[suffix]</span>
+                    <span class="special-token">&lt;INFILL&gt;</span>
+                    <span class="content-token">[middle]</span>
+                    <span class="special-token">&lt;EOT&gt;</span>
+                </div>
+            </div>
+            <div class="format-box format-2">
+                <h4>CodeLlama Format 2</h4>
+                <div class="token-sequence">
+                    <span class="special-token">&lt;BOS&gt;</span>
+                    <span class="special-token">&lt;PREFIX&gt;</span>
+                    <span class="special-token">&lt;SUFFIX&gt;</span>
+                    <span class="content-token">[suffix]</span>
+                    <span class="special-token">&lt;INFILL&gt;</span>
+                    <span class="content-token">[prefix]</span>
+                    <span class="content-token">[middle]</span>
+                    <span class="special-token">&lt;EOT&gt;</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>6.4 Qwen2.5</h3>
+        <div class="warning">
+            <strong>Qwen2.5 FIM Implementation:</strong> Qwen2.5/coder/3b/base and similar models <b>do not use random ordering</b> for FIM. The sequence is always <code>&lt;PREFIX&gt;[prefix]&lt;SUFFIX&gt;[suffix]&lt;INFILL&gt;[middle]&lt;EOT&gt;</code>. The mask is typically all 1s after the context, so the model is trained to predict every next token. This is simpler than StarCoder2/CodeLlama and may be less robust to order changes at inference time.
+        </div>
+
+        <h3>6.5 Model-Specific Summary Table</h3>
+        <table>
+            <tr><th>Model</th><th>Random FIM Order?</th><th>BOS Token?</th><th>Format Example</th></tr>
+            <tr><td>StarCoder</td><td>Yes (50/50 hardcoded)</td><td>No</td><td>&lt;PREFIX&gt;[prefix]&lt;SUFFIX&gt;[suffix]&lt;INFILL&gt;[middle]&lt;EOT&gt;<br>&lt;SUFFIX&gt;[suffix]&lt;PREFIX&gt;[prefix]&lt;INFILL&gt;[middle]&lt;EOT&gt;</td></tr>
+            <tr><td>StarCoder2</td><td>Yes (50/50)</td><td>No</td><td>&lt;PREFIX&gt;[prefix]&lt;SUFFIX&gt;[suffix]&lt;INFILL&gt;[middle]&lt;EOT&gt;<br>&lt;SUFFIX&gt;[suffix]&lt;PREFIX&gt;[prefix]&lt;INFILL&gt;[middle]&lt;EOT&gt;</td></tr>
+            <tr><td>CodeLlama</td><td>Yes (50/50)</td><td>Yes</td><td>&lt;BOS&gt;&lt;PREFIX&gt;[prefix]&lt;SUFFIX&gt;[suffix]&lt;INFILL&gt;[middle]&lt;EOT&gt;<br>&lt;BOS&gt;&lt;PREFIX&gt;&lt;SUFFIX&gt;[suffix]&lt;INFILL&gt;[prefix][middle]&lt;EOT&gt;</td></tr>
+            <tr><td>Qwen2.5</td><td>No (fixed)</td><td>No</td><td>&lt;PREFIX&gt;[prefix]&lt;SUFFIX&gt;[suffix]&lt;INFILL&gt;[middle]&lt;EOT&gt;</td></tr>
+        </table>
+
+        <h3>6.6 Model-Specific FIM Implementation Table (Expanded)</h3>
+        <table>
+            <thead>
+                <tr><th>Model</th><th>FIM Format</th><th>Random Ordering</th><th>Special Tokens</th><th>Masking</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>StarCoder</strong></td><td>FIM (original)</td><td>Yes (PREFIX-first or SUFFIX-first, hardcoded 50/50)</td><td>PREFIX, SUFFIX, INFILL, EOT</td><td>0 for context, 1 for target</td><td>Original implementation with <code>SymbolsMiddleSplit</code>, simpler processing pipeline</td></tr>
+                <tr><td><strong>StarCoder2</strong></td><td>FIMv2</td><td>Yes (PREFIX-first or SUFFIX-first, 50/50 by <code>smp_prob</code>)</td><td>PREFIX, SUFFIX, INFILL, EOT</td><td>0 for context tokens, 1 for target tokens</td><td>Order-agnostic, robust FIM training with configurable randomization</td></tr>
+                <tr><td><strong>CodeLlama</strong></td><td>FIMv2CodeLlama</td><td>Yes (random order, 50/50, with BOS token)</td><td>BOS, PREFIX, SUFFIX, INFILL, EOT</td><td>0 for BOS and context, 1 for target</td><td>Implements official CodeLlama FIM spec</td></tr>
+                <tr><td><strong>Qwen2.5</strong></td><td>Qwen FIM (fixed order)</td><td><span style="color:red;font-weight:bold;">No</span> (always PREFIX, SUFFIX, INFILL order)</td><td>PREFIX, SUFFIX, INFILL, EOT</td><td>1 for all tokens after context</td><td>Fixed FIM order, no randomization. Simpler but less robust to order changes</td></tr>
+            </tbody>
+        </table>
+
+        <hr>
+        <p><em>Part 1 of comprehensive FIM analysis covering:</em></p>
+        <ul style="font-style: italic; margin-bottom: 10px;">
+            <li>Executive Summary and Key Findings</li>
+            <li>Two-Level Randomization Mechanism</li>
+            <li>Token Construction and Training Flow</li>
+            <li>Model Variants and Implementation Differences</li>
+        </ul>
+        <p><em>Generated: July 2025 | Part 1 of 2</em></p>
+    </div>
+</body>
+</html>
